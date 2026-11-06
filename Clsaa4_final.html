@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI 智能聊天室 - Class 4 Final</title>
+  <style>
+    /* 基础重置 */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      background-color: #f3f4f6;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* 页面整体容器：垂直 Flex 布局，支持独立全屏/居中展示 */
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      max-width: 800px;
+      height: 92vh;
+      background-color: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+    }
+
+    /* 1. 顶部标题栏：固定高度，Flex 居中对齐，文字居中 */
+    .chat-header {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 52px;
+      border-bottom: 1px solid #e5e7eb;
+      background-color: #f9fafb;
+      user-select: none;
+    }
+
+    .chat-title {
+      font-size: 16px;
+      font-weight: bold;
+      color: #111827;
+      text-align: center;
+    }
+
+    /* 2. 中间消息区域：自适应剩余空间，overflow 自动滚动 */
+    .chat-messages {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 20px;
+      background-color: #f9fafb;
+      scroll-behavior: smooth;
+    }
+
+    /* 用户消息行：靠右布局 */
+    .message-user {
+      display: flex;
+      justify-content: flex-end;
+      margin: 8px 0;
+      width: 100%;
+    }
+
+    /* 用户消息：灰色圆角气泡，圆角 10px */
+    .bubble-user {
+      max-width: 75%;
+      padding: 10px 14px;
+      font-size: 14px;
+      line-height: 1.5;
+      color: #1f2937;
+      text-align: left;
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+      background-color: #e5e7eb;
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+
+    /* AI 消息行：靠左布局 */
+    .message-ai {
+      display: flex;
+      justify-content: flex-start;
+      margin: 8px 0;
+      width: 100%;
+    }
+
+    /* AI 消息：蓝色圆角气泡，圆角 10px */
+    .bubble-ai {
+      max-width: 75%;
+      padding: 10px 14px;
+      font-size: 14px;
+      line-height: 1.5;
+      color: #ffffff;
+      text-align: left;
+      border: 1px solid #2563eb;
+      border-radius: 10px;
+      background-color: #2563eb;
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+
+    /* 打字机光标动画效果 */
+    .typing-cursor::after {
+      content: "▌";
+      display: inline-block;
+      margin-left: 2px;
+      font-size: 12px;
+      animation: blink 0.7s infinite;
+      color: currentColor;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    /* 3. 底部输入栏：横向 Flex 布局，输入框 + 发送按钮并排 */
+    .chat-input-bar {
+      display: flex;
+      align-items: center;
+      height: 60px;
+      padding: 10px 16px;
+      border-top: 1px solid #e5e7eb;
+      background-color: #ffffff;
+    }
+
+    /* 输入框：自适应宽度，圆角 10px */
+    .chat-input {
+      flex: 1;
+      height: 38px;
+      font-size: 14px;
+      color: #1f2937;
+      padding: 0 12px;
+      margin: 0 10px 0 0;
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+      outline: none;
+      background-color: #ffffff;
+      transition: border-color 0.2s;
+    }
+
+    .chat-input:focus {
+      border-color: #2563eb;
+    }
+
+    /* 发送按钮：固定宽度，圆角 10px */
+    .send-button {
+      width: 80px;
+      height: 38px;
+      padding: 0;
+      font-size: 14px;
+      font-weight: bold;
+      color: #ffffff;
+      text-align: center;
+      border: 1px solid #2563eb;
+      border-radius: 10px;
+      background-color: #2563eb;
+      cursor: pointer;
+      user-select: none;
+      transition: background-color 0.2s, opacity 0.2s;
+    }
+
+    .send-button:hover {
+      background-color: #1d4ed8;
+      border-color: #1d4ed8;
+    }
+
+    .send-button:disabled {
+      background-color: #93c5fd;
+      border-color: #93c5fd;
+      cursor: not-allowed;
+    }
+
+    /* 滚动条细化样式 */
+    .chat-messages::-webkit-scrollbar {
+      width: 6px;
+    }
+    .chat-messages::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .chat-messages::-webkit-scrollbar-thumb {
+      background: #d1d5db;
+      border-radius: 3px;
+    }
+
+    /* 移动端全屏自适应 */
+    @media (max-width: 640px) {
+      .chat-container {
+        height: 100vh;
+        max-width: 100%;
+        border-radius: 0;
+        border: none;
+      }
+      .bubble-user, .bubble-ai {
+        max-width: 85%;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 页面整体容器：垂直 Flex 布局 -->
+  <div class="chat-container">
+    
+    <!-- 1. 顶部标题栏：固定高度，文字居中 -->
+    <div class="chat-header">
+      <div class="chat-title">AI 智能聊天室</div>
+    </div>
+
+    <!-- 2. 中间消息区域：高度自适应剩余空间，overflow 自动滚动 -->
+    <div class="chat-messages" id="messagesRef">
+      <!-- 消息列表由 JS 数组动态驱动渲染 -->
+    </div>
+
+    <!-- 3. 底部输入栏：横向 Flex 布局，输入框 + 发送按钮并排 -->
+    <div class="chat-input-bar">
+      <input
+        type="text"
+        id="messageInput"
+        class="chat-input"
+        placeholder="请输入内容，按 Enter 发送..."
+        autocomplete="off"
+      />
+      <button id="sendBtn" class="send-button">发送</button>
+    </div>
+
+  </div>
+
+  <script>
+    /**
+     * ========================================================
+     * 核心逻辑实现（纯原生 JS，零任何外部依赖，支持直接双击独立运行）
+     * ========================================================
+     */
+
+    // 1. 消息列表数据（对齐 Vue 响应式数据结构 messageList）
+    const messageList = [
+      {
+        role: 'ai',
+        content: '你好！我是 AI 智能助手，请问有什么可以帮助你的？'
+      }
+    ];
+
+    // DOM 元素引用
+    const messagesRef = document.getElementById('messagesRef');
+    const messageInput = document.getElementById('messageInput');
+    const sendBtn = document.getElementById('sendBtn');
+
+    // 状态控制：是否正在打字/生成中
+    let isGenerating = false;
+
+    /**
+     * 自动滚动到消息区域最底部
+     */
+    function scrollToBottom() {
+      messagesRef.scrollTop = messagesRef.scrollHeight;
+    }
+
+    /**
+     * 渲染单条消息气泡至 DOM
+     * @param {Object} msg - 消息对象 { role: 'user'|'ai', content: string }
+     * @returns {HTMLElement} 返回创建的气泡文本元素
+     */
+    function appendMessageDOM(msg) {
+      const rowDiv = document.createElement('div');
+      rowDiv.className = msg.role === 'user' ? 'message-user' : 'message-ai';
+
+      const bubbleDiv = document.createElement('div');
+      bubbleDiv.className = msg.role === 'user' ? 'bubble-user' : 'bubble-ai';
+      bubbleDiv.textContent = msg.content;
+
+      rowDiv.appendChild(bubbleDiv);
+      messagesRef.appendChild(rowDiv);
+      scrollToBottom();
+      return bubbleDiv;
+    }
+
+    /**
+     * 初始化渲染消息列表（对齐 Vue 的 v-for 数组渲染）
+     */
+    function initRender() {
+      messagesRef.innerHTML = '';
+      messageList.forEach(msg => {
+        appendMessageDOM(msg);
+      });
+      scrollToBottom();
+    }
+
+    /**
+     * AI 消息流式接收及打字机逐字输出
+     * @param {string} prompt - 用户输入的问题
+     */
+    async function receiveAIResponse(prompt) {
+      isGenerating = true;
+      sendBtn.disabled = true;
+
+      // 创建初始空白 AI 消息气泡并挂载
+      const aiMessage = {
+        role: 'ai',
+        content: ''
+      };
+      const bubbleEl = appendMessageDOM(aiMessage);
+      bubbleEl.classList.add('typing-cursor');
+
+      // 打字机字符缓冲队列与定时器
+      const charQueue = [];
+      let typingTimer = null;
+
+      const startTypewriter = () => {
+        if (typingTimer) return;
+        typingTimer = setInterval(() => {
+          if (charQueue.length > 0) {
+            const char = charQueue.shift();
+            if (char) {
+              aiMessage.content += char;
+              bubbleEl.textContent += char;
+              scrollToBottom();
+            }
+          } else if (!isGenerating) {
+            // 所有字符输出完毕
+            clearInterval(typingTimer);
+            typingTimer = null;
+            bubbleEl.classList.remove('typing-cursor');
+            
+            // 将完整消息存入消息列表数组
+            messageList.push(aiMessage);
+
+            // 恢复发送状态
+            sendBtn.disabled = false;
+            messageInput.focus();
+          }
+        }, 30); // 打字机速度：30ms/字
+      };
+
+      try {
+        /*
+         * ----------------------------------------------------
+         * 【预留真实 SSE 流式接收代码（对接后端接口时取消注释）】
+         * ----------------------------------------------------
+         * const SSE_API_URL = '/api/chat/stream';
+         * const response = await fetch(SSE_API_URL, {
+         *   method: 'POST',
+         *   headers: { 'Content-Type': 'application/json' },
+         *   body: JSON.stringify({ prompt: prompt })
+         * });
+         * if (response.body) {
+         *   const reader = response.body.getReader();
+         *   const decoder = new TextDecoder('utf-8');
+         *   while (true) {
+         *     const { done, value } = await reader.read();
+         *     if (done) break;
+         *     const chunk = decoder.decode(value, { stream: true });
+         *     for (const char of chunk) {
+         *       charQueue.push(char);
+         *     }
+         *     startTypewriter();
+         *   }
+         * }
+         */
+
+        // ----------------------------------------------------
+        // 【模拟 SSE 流式返回（保证单文件直接双击运行体验打字机效果）】
+        // ----------------------------------------------------
+        const mockReply = `已收到你的消息："${prompt}"。这是通过预留 SSE 管道与打字机字符缓冲队列逐字输出的 AI 回复示例。本 HTML 文件完全自包含，可离线直接双击运行！`;
+        
+        for (let i = 0; i < mockReply.length; i++) {
+          await new Promise(resolve => setTimeout(resolve, 35));
+          charQueue.push(mockReply[i]);
+          startTypewriter();
+        }
+      } catch (error) {
+        console.error('SSE 流式接收异常:', error);
+        bubbleEl.textContent = '接收消息失败，请稍后重试。';
+        aiMessage.content = bubbleEl.textContent;
+        bubbleEl.classList.remove('typing-cursor');
+        sendBtn.disabled = false;
+      } finally {
+        isGenerating = false;
+      }
+    }
+
+    /**
+     * 发送消息核心逻辑
+     */
+    async function handleSend() {
+      const text = messageInput.value.trim();
+      if (!text || isGenerating) return;
+
+      // 1. 立即追加用户消息并更新界面与列表
+      const userMessage = {
+        role: 'user',
+        content: text
+      };
+      messageList.push(userMessage);
+      appendMessageDOM(userMessage);
+
+      // 清空输入框并滚动
+      messageInput.value = '';
+      scrollToBottom();
+
+      // 2. 触发 AI 消息流式接收及打字机输出
+      receiveAIResponse(text);
+    }
+
+    // 事件绑定：发送按钮点击
+    sendBtn.addEventListener('click', handleSend);
+
+    // 事件绑定：支持回车键发送
+    messageInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleSend();
+      }
+    });
+
+    // 页面加载完成后自动渲染并聚焦输入框
+    window.addEventListener('DOMContentLoaded', () => {
+      initRender();
+      messageInput.focus();
+    });
+  </script>
+</body>
+</html>
